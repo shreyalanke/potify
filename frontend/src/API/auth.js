@@ -20,6 +20,14 @@ async function signup(name,email, password) {
 
     }   
 };
+async function getUser() {
+    try {
+        const response = await apiClient.get('/auth/me');
+        return response.data;
+    } catch (error) {
+        console.error('Get User error:', error);
+    }   
+};
 
 
-export { login , signup};
+export { login , signup, getUser};

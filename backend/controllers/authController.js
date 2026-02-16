@@ -48,5 +48,16 @@ async function login(req, res) {
   }
 }
 
+async function me(req, res) {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found", success :false });
+    }
+    res.status(200).json({ user, success :true });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user", error, success :false });
+  } 
+}
 
-export { signup ,login};
+export { signup ,login,me};

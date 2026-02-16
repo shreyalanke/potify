@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import envConfig from "./config/index.js";
+import songRoutes from "./routes/songRoutes.js";
 
 const PORT = envConfig.PORT || 5000;
 const app = express();
@@ -42,10 +43,9 @@ app.use((req, res, next) => {
 connectDB();
 
 app.use("/auth", authRoutes);
+app.use("/songs", songRoutes);
 
-app.get("/", (req, res) => {
-  res.send("Backend running");
-});
+app.use(express.static("music"));
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
