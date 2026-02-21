@@ -7,8 +7,19 @@ let songs = [
         title: "Perfect",
         url: "Perfect.mp3"
     },{
+        title: "Aao Naa",
+        url: "Aao Naa.mp3"
+    },{
         title: "Dj Wale Babu",
-        url: "DjWaleBabu.mp3"
+        url: "Dj Wale Babu.mp3"
+    },
+    {
+        title: "Samjhawan",
+        url: "Samjhawan.mp3"
+    },
+     {
+        title: "O Rangrez",
+        url: "O Rangrez.mp3"
     }
 ];  
 async function seed() {

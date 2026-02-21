@@ -60,4 +60,15 @@ async function me(req, res) {
   } 
 }
 
-export { signup ,login,me};
+
+async function logout(req, res) {
+  try {
+    res.clearCookie("token");
+    res.status(200).json({ message: "Logout successful", success :true });
+  } catch (error) {
+    res.status(500).json({ message: "Error logging out", error, success :false });
+  }
+}
+
+
+export { signup ,login,me,logout};

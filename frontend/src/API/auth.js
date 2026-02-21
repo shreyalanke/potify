@@ -29,5 +29,14 @@ async function getUser() {
     }   
 };
 
+async function logout() {
+    try {
+        const response = await apiClient.post('/auth/logout');
+        return response.data;
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+}
 
-export { login , signup, getUser};
+
+export { login , signup,logout, getUser};
