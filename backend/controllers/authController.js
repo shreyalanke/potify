@@ -25,8 +25,11 @@ async function signup(req, res) {
 }
 
 async function login(req, res) {
-  try {    const { email, password } = req.body;
+  try {    
+    const { email, password } = req.body;
     const user = await User.findOne({ email });
+
+    console.log("user:", user);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" ,success :false });
@@ -35,7 +38,9 @@ async function login(req, res) {
       if (!isMatch) {
         return res.status(400).json({ message: "Invalid credentials", success :false });
       } else {
+        console.log("Password match successful");
         const token = generateToken(user) ;
+        console.log("Generated token:", token);
         res.cookie("token", token, {
           httpOnly: true,
           sameSite: "strict",

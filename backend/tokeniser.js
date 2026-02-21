@@ -26,6 +26,6 @@ export function authMiddleware(req, res, next) {
     if (!decoded) {
         return res.status(401).json({ message: "Invalid token", success :false });
     }
-    req.user = decoded;
+    req.user = decoded
     next();
 }
