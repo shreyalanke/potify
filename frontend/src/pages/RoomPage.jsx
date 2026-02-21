@@ -3,10 +3,14 @@ import { Search } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { getUser } from "../API/auth";
 import { useNavigate } from "react-router-dom";
+import { getRoom } from "../API/room";
 
 export default function RoomPage() {
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [user, setUser] = useState(null);
   const { roomId } = useParams();
   let navigate = useNavigate();
 
@@ -18,21 +22,55 @@ export default function RoomPage() {
   ];
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 3000);
     (async ()=>{
       let res = await getUser();
 
       if(res && res.success){
-        console.log("User", res.user);
+        res.user = { id: res.user._id };
+        setUser(res.user);
+        if(roomId == "new"){
+            // Create new room logic here
+            let result = await getRoom();
+
+            if(result && result.success){
+              navigate(`/room/${result.roomId}`);
+            }
+        }else{
+           let result = await getRoom(roomId);
+            if(result && result.success){
+              let ws = new WebSocket(`ws://localhost:5000?roomId=${roomId}&userId=${res.user.id}`);
+              ws.onmessage = (event) => {
+                let parsedMessage;
+                try {
+                  parsedMessage = JSON.parse(event.data);
+                  if(parsedMessage.type === "progress_update"){
+                    setProgress(parsedMessage.progress);
+                  }
+                } catch (error) {
+                  console.error("Invalid message format:", event.data);
+                  return;
+                }
+              }
+              setSocket(ws);
+            }else{
+              navigate("/home");
+            }
+        }
       } else {
        navigate("/login");
       }
     })();
-    const socket = new WebSocket("ws://localhost:5000");
-    return () => clearTimeout(timer);
-  }, []);
+    return () => {
+      if (socket){
+        socket.close();
+      }
+    }
+  }, [roomId]);
+
+  function handleProgressChange(e) {
+    setProgress(e.target.value);
+    socket.send(JSON.stringify({ type: "progress_update", progress: e.target.value }));
+  }
 
   // Loading UI
   if (loading) {
@@ -129,7 +167,7 @@ export default function RoomPage() {
         </div>
 
         <div className="w-1/3">
-          <input type="range" className="w-full accent-white" />
+          <input type="range" className="w-full accent-white" value={progress} onChange={handleProgressChange} />
         </div>
       </div>
     </div>
