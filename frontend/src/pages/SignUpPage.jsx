@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { signup } from "../API/auth";
-import { Navigate , useNavigate} from 'react-router-dom';
+import { Navigate , useNavigate,Link} from 'react-router-dom';
 
 
 export default function SignUpPage() {
@@ -71,17 +71,6 @@ export default function SignUpPage() {
             />
           </div>
 
-          {/* Remember + Forgot */}
-          <div className="flex items-center justify-between mb-6 text-sm">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" className="rounded" />
-              Remember me
-            </label>
-            <a href="#" className="text-blue-600 hover:underline">
-              Forgot password?
-            </a>
-          </div>
-
           {/* Button */}
           <button
             type="submit"
@@ -95,9 +84,7 @@ export default function SignUpPage() {
         {/* Signup link */}
         <p className="text-center text-gray-600 text-sm mt-6">
          Already have an account?{" "}
-          <a href="#" className="text-blue-600 font-medium hover:underline">
-            Sign In
-          </a>
+         <Link to="/login" className="text-blue-600 font-medium hover:underline">Sign In</Link>
         </p>
       </div>
     </div>

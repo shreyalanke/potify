@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-
+import roomRoutes from "./routes/roomRoutes.js";  
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import songRoutes from "./routes/songRoutes.js";
@@ -41,6 +41,7 @@ app.use((req, res, next) => {
 connectDB();
 
 app.use("/auth", authRoutes);
+app.use("/rooms", roomRoutes);
 app.use("/songs", songRoutes);
 
 app.use(express.static("music"));

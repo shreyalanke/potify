@@ -68,8 +68,9 @@ export default function RoomPage() {
   }, [roomId]);
 
   function handleProgressChange(e) {
-    setProgress(e.target.value);
-    socket.send(JSON.stringify({ type: "progress_update", progress: e.target.value }));
+    const value = parseInt(e.target.value);
+    setProgress(value);
+    socket.send(JSON.stringify({ type: "progress_update", progress: value }));
   }
 
   // Loading UI
@@ -167,7 +168,7 @@ export default function RoomPage() {
         </div>
 
         <div className="w-1/3">
-          <input type="range" className="w-full accent-white" value={progress} onChange={handleProgressChange} />
+          <input type="range" min="0" max="100" className="w-full accent-white" value={progress} onChange={handleProgressChange} />
         </div>
       </div>
     </div>

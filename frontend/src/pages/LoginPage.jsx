@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { login } from "../API/auth";
 import { Navigate , useNavigate} from 'react-router-dom';
+import { Link } from "react-router-dom";
 
 export default function Login() {
     const [name, setName] = useState("");
@@ -68,22 +69,10 @@ export default function Login() {
             />
           </div>
 
-          {/* Remember + Forgot */}
-          <div className="flex items-center justify-between mb-6 text-sm">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" className="rounded" />
-              Remember me
-            </label>
-            <a href="#" className="text-blue-600 hover:underline">
-              Forgot password?
-            </a>
-          </div>
-
           {/* Button */}
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
-          
           >
             Sign In
           </button>
@@ -92,9 +81,7 @@ export default function Login() {
         {/* Signup link */}
         <p className="text-center text-gray-600 text-sm mt-6">
           Don’t have an account?{" "}
-          <a href="#" className="text-blue-600 font-medium hover:underline">
-            Sign up
-          </a>
+            <Link to="/signup" className="text-blue-600 font-medium hover:underline">Sign up</Link>
         </p>
       </div>
     </div>
