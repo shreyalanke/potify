@@ -42,7 +42,7 @@ class SocketManager {
     if (roomManager.getRoom(roomId)) {
       userManager.addUser(userId, ws);
 
-      roomManager.getRoom(roomId).members.push(userId);
+      roomManager.addUserToRoom(roomId, userId);
       console.log(`User ${userId} joined room ${roomId}`);
 
       return true;
