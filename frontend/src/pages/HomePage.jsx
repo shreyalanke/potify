@@ -37,6 +37,7 @@ function HomePage() {
               ws.onopen = async () => {
                 let result = await getRoom(roomId);
                 if(result && result.success){
+                  console.log("Fetched room details after joining:", result.room);
                   setRoom(result.room);
                 }
               };

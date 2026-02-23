@@ -14,9 +14,9 @@ router.get("/", (req, res) => {
   console.log("Current rooms:", roomManager.rooms);
 });
 
-router.get("/:roomId", async (req, res) => {
+router.get("/:roomId", (req, res) => {
   const { roomId } = req.params;
-  const room = await roomManager.asyncGetRoom(roomId);
+  const room = roomManager.getRoom(roomId);
   if(room){
     res.json({ success: true, room: room});
   }else{

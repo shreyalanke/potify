@@ -10,12 +10,12 @@ class SocketManager {
   }
 
   init() {
-    this.wss.on("connection", (ws, req) => {
+    this.wss.on("connection", async (ws, req) => {
       const url = new URL(req.url, `http://${req.headers.host}`);
       const roomId = url.searchParams.get("roomId");
       const userId = url.searchParams.get("userId");
 
-      if (!this.joinSocket(roomId, userId, ws)) {
+      if (!await this.joinSocket(roomId, userId, ws)) {
         return;
       }
       ws.roomId = roomId;
@@ -38,11 +38,11 @@ class SocketManager {
     });
   }
 
-  joinSocket(roomId, userId, ws) {
+  async joinSocket(roomId, userId, ws) {
     if (roomManager.getRoom(roomId)) {
       userManager.addUser(userId, ws);
 
-      roomManager.addUserToRoom(roomId, userId);
+      await roomManager.addUserToRoom(roomId, userId);
       console.log(`User ${userId} joined room ${roomId}`);
 
       return true;

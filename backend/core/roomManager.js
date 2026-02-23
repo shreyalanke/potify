@@ -18,31 +18,24 @@ class RoomManager {
     return roomId;
   }
 
-  async asyncGetRoom(roomId) {
-    let room = this.rooms[roomId];
-    if (room) {
-      let members = room.members.map((id) => {
-        let member = User.findById(id).select("-password");
-        return member;
-      });
-
-      members = await Promise.all(members).then((membersData) => {
-        return membersData;
-      });
-      return {
-        ...room,
-        members:members
-      }
-    }
-  }
-
   getRoom(roomId) {
     return this.rooms[roomId];
   }
 
-  addUserToRoom(roomId, userId) {
+  async addUserToRoom(roomId, userId) {
     if (this.rooms[roomId]) {
-      this.rooms[roomId].members.push(userId);
+      let member;
+      this.rooms[roomId].members.forEach(user => {
+        if(user._id == userId){
+          member = user;
+        }
+      });
+
+      if(!member){
+        member = await User.findById(userId).select("-password");
+        member._id = member._id.toString();
+        this.rooms[roomId].members.push(member);
+      }
     }
   }
 
@@ -50,12 +43,13 @@ class RoomManager {
     delete this.rooms[roomId];
   }
 
+  // TODO(KARAN): remove this piece of shit
   updateRoomProgress(roomId, progress, userId) {
     if (this.rooms[roomId]) {
       this.rooms[roomId].progressBar = progress;
-      for (let memberId of this.rooms[roomId].members) {
-        if (userManager.getUser(memberId)) {
-          userManager.getUser(memberId).send(
+      for (let member of this.rooms[roomId].members) {
+        if (userManager.getUser(member._id)) {
+          userManager.getUser(member._id).send(
             JSON.stringify({
               type: "progress_update",
               progress: progress,
@@ -69,7 +63,9 @@ class RoomManager {
   removeUserFromRoom(roomId, userId) {
     if (this.rooms[roomId]) {
       this.rooms[roomId].members = this.rooms[roomId].members.filter(
-        (id) => id !== userId,
+        (member) => {
+          return member._id != userId;
+        }
       );
     }
   }
