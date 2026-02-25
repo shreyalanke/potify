@@ -1,6 +1,7 @@
 import { roomIdGenerator } from "../utils/index.js";
 import userManager from "./userManager.js";
 import User from "../models/User.js";
+import Song from "../models/Song.js";
 
 class RoomManager {
   constructor() {
@@ -14,6 +15,13 @@ class RoomManager {
       hostId: hostId,
       members: [],
       progressBar: 0,
+      player: {
+        song: null,
+        isPlaying: false,
+        // duration: 0,
+        lastUpdateTime: new Date().getTime(),
+        currentTime: 0,
+      }
     };
     return roomId;
   }
@@ -67,6 +75,18 @@ class RoomManager {
           return member._id != userId;
         }
       );
+    }
+  }
+
+  async selectSong(roomId, songId) {
+    if (this.rooms[roomId]) {
+      let song = await Song.findById(songId);
+      this.rooms[roomId].player.song = song;
+      this.rooms[roomId].player.song._id = this.rooms[roomId].player.song._id.toString();
+      // this.rooms[roomId].player.duration = song.duration;
+      this.rooms[roomId].player.isPlaying = true;
+      this.rooms[roomId].player.currentTime = 0;
+      this.rooms[roomId].player.lastUpdateTime = new Date().getTime();
     }
   }
 }

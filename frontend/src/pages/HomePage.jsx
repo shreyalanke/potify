@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getUser, logout } from "../API/auth";
 import { getSongs } from "../API/song.js";
@@ -12,12 +12,16 @@ function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [user, setUser] = useState(null);
   const [room, setRoom] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const audioRef = useRef(null);
 
   const roomId = searchParams.get("room");
 
   // UI State for the music player (Mocking currently playing song)
-  const [currentSong, setCurrentSong] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [player, setPlayer] = useState(null);
+
+  const currentSong = player?.song || null;
 
   useEffect(() => {
     (async () => {
@@ -31,6 +35,9 @@ function HomePage() {
             let result = await getRoom(roomId);
             if (result && result.success) {
               setRoom(result.room);
+              if (socket){
+                return;
+              }
               let ws = new WebSocket(
                 `ws://localhost:5000?roomId=${roomId}&userId=${userRes.user.id}`
               );
@@ -41,6 +48,21 @@ function HomePage() {
                   setRoom(result.room);
                 }
               };
+
+
+              setSocket(ws);
+              ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                if (message.type === "song_selected") {
+                  setPlayer(message.player);
+                  if (message.player?.song?.url && audioRef.current) {
+                    console.log("Playing new song:", message.player.song.url);
+                    audioRef.current.src = `http://localhost:5000/${message.player.song.url}`;
+                    audioRef.current.play();
+                    setIsPlaying(true);
+                  }
+                }
+              }
             } else {
               setSearchParams({});
             }
@@ -53,10 +75,6 @@ function HomePage() {
         const songRes = await getSongs();
         if (songRes && songRes.success) {
           setSongs(songRes.songs || []);
-          // Set the first song as default in the player if available
-          if (songRes.songs && songRes.songs.length > 0) {
-            setCurrentSong(songRes.songs[0]);
-          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -71,6 +89,15 @@ function HomePage() {
     if (res && res.success) {
       navigate("/login");
     }
+  }
+
+  async function handleSongSelect(song) {
+    socket.send(
+      JSON.stringify({
+        type: "selectSong",
+        songId: song._id,
+      })
+    );
   }
 
   // FULL PAGE LOADING UI
@@ -91,6 +118,13 @@ function HomePage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 text-white font-sans overflow-hidden">
+      {/* Hidden Audio Player */}
+      <audio
+        ref={audioRef}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
+
       {/* Top Navbar */}
       <nav className="h-16 flex justify-between items-center px-6 border-b border-gray-800 bg-gray-950 z-10 shadow-sm">
         <div className="flex items-center gap-4">
@@ -132,10 +166,7 @@ function HomePage() {
                 {songs.map((song, idx) => (
                   <div
                     key={idx}
-                    onClick={() => {
-                      setCurrentSong(song);
-                      setIsPlaying(true);
-                    }}
+                    onClick={()=>{handleSongSelect(song)}}
                     className={`flex items-center justify-between p-3 rounded-lg hover:bg-gray-800 cursor-pointer transition group ${
                       currentSong?.id === song.id ? "bg-gray-800" : ""
                     }`}
@@ -192,7 +223,15 @@ function HomePage() {
                       ⏮
                     </button>
                     <button
-                      onClick={() => setIsPlaying(!isPlaying)}
+                      onClick={() => {
+                        if (audioRef.current) {
+                          if (isPlaying) {
+                            audioRef.current.pause();
+                          } else {
+                            audioRef.current.play();
+                          }
+                        }
+                      }}
                       className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition"
                     >
                       {isPlaying ? "⏸" : "▶"}

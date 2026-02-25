@@ -23,7 +23,7 @@ class SocketManager {
         let parsedMessage;
         try {
           parsedMessage = JSON.parse(message);
-          this.messageHandler(parsedMessage, userId, ws);
+          this.messageHandler(parsedMessage, userId, ws,roomId);
         } catch (error) {
           console.error("Invalid message format:", message);
           return;
@@ -52,11 +52,19 @@ class SocketManager {
     }
   }
 
-  messageHandler(message, userId, ws) {
+  async messageHandler(message, userId, ws,roomId) {
     switch (message.type) {
-      case "progress_update":
-        const { progress } = message;
-        roomManager.updateRoomProgress(ws.roomId, progress, userId);
+      case "selectSong":
+        await roomManager.selectSong(roomId, message.songId);
+
+        roomManager.getRoom(roomId).members.forEach(member => {
+          userManager.getUser(member._id)?.send(
+            JSON.stringify({
+              type: "song_selected",
+              player: roomManager.getRoom(roomId).player,
+            }),
+          );
+        });
         break;
     }
   }
