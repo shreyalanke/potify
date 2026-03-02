@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, use } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getUser, logout } from "../API/auth";
 import { getSongs } from "../API/song.js";
 import { getRoom } from "../API/room.js";
+
 
 function HomePage() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ function HomePage() {
   const [player, setPlayer] = useState(null);
 
   const currentSong = player?.song || null;
+  const [currentUrl, setCurrentUrl] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +44,7 @@ function HomePage() {
                 `ws://localhost:5000?roomId=${roomId}&userId=${userRes.user.id}`
               );
               ws.onopen = async () => {
+                setSocket(ws);
                 let result = await getRoom(roomId);
                 if(result && result.success){
                   console.log("Fetched room details after joining:", result.room);
@@ -49,20 +52,21 @@ function HomePage() {
                 }
               };
 
-
-              setSocket(ws);
               ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
                 if (message.type === "song_selected") {
                   setPlayer(message.player);
-                  if (message.player?.song?.url && audioRef.current) {
-                    console.log("Playing new song:", message.player.song.url);
-                    audioRef.current.src = `http://localhost:5000/${message.player.song.url}`;
-                    audioRef.current.play();
-                    setIsPlaying(true);
-                  }
+                  // if (message.player?.song?.url && audioRef.current) {
+                  //   console.log("Playing new song:", message.player.song.url);
+                  //   audioRef.current.src = `http://localhost:5000/${message.player.song.url}`;
+                  //   audioRef.current.play();
+                  //   setIsPlaying(true);
+                  // }
                 }
-              }
+                if(message.type === "playerUpdate"){
+                  setPlayer(message.player);
+                 
+              }}
             } else {
               setSearchParams({});
             }
@@ -83,6 +87,29 @@ function HomePage() {
       }
     })();
   }, [navigate, roomId]);
+
+ 
+
+  useEffect(() => {
+    if (player?.song?.url && audioRef.current) {
+      if(currentUrl !== player.song.url){
+        audioRef.current.src = `http://localhost:5000/${player.song.url}`;
+        setCurrentUrl(player.song.url);
+      }
+      if(player.isPlaying){
+        audioRef.current.play();
+      }else{
+        audioRef.current.pause();
+      }
+
+  }
+  }, [player]);
+
+  useEffect(() => {
+    if(socket){
+      socket.send(JSON.stringify({ type: "isPlaying", isPlaying }));
+    }
+  }, [isPlaying,socket]);
 
   async function handleLogout() {
     const res = await logout();

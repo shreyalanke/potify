@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, LogOut } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { getUser } from "../API/auth";
 import { useNavigate } from "react-router-dom";
-import { getRoom } from "../API/room";
+import { getRoom, leaveRoom } from "../API/room";
 
 export default function RoomPage() {
   const [search, setSearch] = useState("");
@@ -73,6 +73,24 @@ export default function RoomPage() {
     socket.send(JSON.stringify({ type: "progress_update", progress: value }));
   }
 
+  async function handleLeaveRoom() {
+    try {
+      if (socket) {
+        socket.close();
+      }
+      const result = await leaveRoom(roomId);
+      if (result && result.success) {
+        navigate("/home");
+      } else {
+        console.error("Failed to leave room");
+        navigate("/home"); // Navigate anyway in case of error
+      }
+    } catch (error) {
+      console.error("Error leaving room:", error);
+      navigate("/home");
+    }
+  }
+
   // Loading UI
   if (loading) {
     return (
@@ -111,7 +129,16 @@ export default function RoomPage() {
         {/* Center - Room Details */}
         <div className="flex-1 p-6 overflow-y-auto bg-zinc-950">
           <div className="bg-zinc-900 rounded-2xl shadow-lg shadow-black/30 p-6 border border-zinc-800">
-            <h1 className="text-2xl font-bold">Room Id {roomId}</h1>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-bold">Room Id {roomId}</h1>
+              <button
+                onClick={handleLeaveRoom}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-2xl transition text-sm font-medium"
+              >
+                <LogOut size={16} />
+                Leave Room
+              </button>
+            </div>
             <p className="text-zinc-400 mt-2">Room description and activity info.</p>
 
             <div className="mt-6 grid grid-cols-3 gap-4">

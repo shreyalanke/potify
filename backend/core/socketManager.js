@@ -66,6 +66,16 @@ class SocketManager {
           );
         });
         break;
+        case "isPlaying":
+          await roomManager.playPause(roomId,  message.isPlaying);
+          roomManager.getRoom(roomId).members.forEach(member => {
+            userManager.getUser(member._id)?.send(
+              JSON.stringify({
+                type: "playerUpdate",
+                player: roomManager.getRoom(roomId).player,
+              }),
+            );
+          });
     }
   }
 }

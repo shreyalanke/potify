@@ -89,6 +89,18 @@ class RoomManager {
       this.rooms[roomId].player.lastUpdateTime = new Date().getTime();
     }
   }
+
+  async playPause(roomId, isPlaying) {
+    let room = this.rooms[roomId];
+    if(room){
+      room.player.isPlaying = isPlaying;
+      if(isPlaying){
+        room.player.lastUpdateTime = new Date().getTime() - room.player.currentTime * 1000;
+      }else{
+        room.player.currentTime = (new Date().getTime() - room.player.lastUpdateTime) / 1000;
+      }
+    }
+  }
 }
 
 export default new RoomManager();
