@@ -1,5 +1,15 @@
 import apiClient from ".";
 
+async function createRoom() {
+    try {
+        const response = await apiClient.get(`/rooms`);
+        return response.data;
+    } catch (error) {
+        console.error("Error creating room:", error);
+        return null;
+    }
+}
+
 async function getRoom(roomId) {
     try {
         if(roomId){
@@ -25,4 +35,4 @@ async function leaveRoom(roomId) {
     }
 }
 
-export { getRoom, leaveRoom };
+export { createRoom, getRoom, leaveRoom };

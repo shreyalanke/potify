@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, use } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getUser, logout } from "../API/auth";
 import { getSongs } from "../API/song.js";
-import { getRoom } from "../API/room.js";
+import { createRoom, getRoom, leaveRoom } from "../API/room.js";
 
 
 function HomePage() {
@@ -125,6 +125,41 @@ function HomePage() {
         songId: song._id,
       })
     );
+  }
+
+  async function handleCreateRoom() {
+    try {
+      const result = await createRoom();
+      if (result && result.success) {
+        setSearchParams({ room: result.roomId });
+      }
+    } catch (error) {
+      console.error("Error creating room:", error);
+    }
+  }
+
+  async function handleJoinRoom(e) {
+    e.preventDefault();
+    if (roomCode.trim()) {
+      setSearchParams({ room: roomCode.trim() });
+    }
+  }
+
+  async function handleLeaveRoom() {
+    try {
+      if (room?.id) {
+        await leaveRoom(room.id);
+      }
+      if (socket) {
+        socket.close();
+        setSocket(null);
+      }
+      setRoom(null);
+      setPlayer(null);
+      setSearchParams({});
+    } catch (error) {
+      console.error("Error leaving room:", error);
+    }
   }
 
   // FULL PAGE LOADING UI
@@ -362,10 +397,7 @@ function HomePage() {
 
               {/* Leave Room Action */}
               <button
-                onClick={() => {
-                  setRoom(null);
-                  setSearchParams({});
-                }}
+                onClick={handleLeaveRoom}
                 className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-2.5 rounded-lg transition shadow-sm mt-auto"
               >
                 Leave Room
@@ -382,7 +414,10 @@ function HomePage() {
                   Host a new room and share the code to let others join your
                   queue.
                 </p>
-                <button className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-2.5 rounded-lg transition shadow-md">
+                <button 
+                  onClick={handleCreateRoom}
+                  className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-2.5 rounded-lg transition shadow-md"
+                >
                   + Create Room
                 </button>
               </div>
@@ -402,7 +437,7 @@ function HomePage() {
                 <p className="text-xs text-gray-400 mb-4">
                   Have an invite code? Enter it below to tune in.
                 </p>
-                <form className="flex flex-col gap-3">
+                <form onSubmit={handleJoinRoom} className="flex flex-col gap-3">
                   <input
                     type="text"
                     placeholder="Enter Room Code"
