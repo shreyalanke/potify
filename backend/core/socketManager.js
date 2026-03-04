@@ -19,7 +19,16 @@ class SocketManager {
         return;
       }
       ws.roomId = roomId;
+      if(roomManager.getRoom(roomId)){
+        roomManager.getRoom(roomId).members.forEach(member => {
+          userManager.getUser(member._id)?.send(JSON.stringify({
+            type: "roomUpdate",
+            room: roomManager.getRoom(roomId),
+          }));
+        })
+      }
       ws.on("message", (message) => {
+
         let parsedMessage;
         try {
           parsedMessage = JSON.parse(message);
@@ -33,6 +42,12 @@ class SocketManager {
         userManager.removeUser(userId);
         if (roomManager.getRoom(roomId)) {
           roomManager.removeUserFromRoom(roomId, userId);
+          roomManager.getRoom(roomId).members.forEach(member => {
+            userManager.getUser(member._id)?.send(JSON.stringify({
+              type: "roomUpdate",
+              room: roomManager.getRoom(roomId),
+            }));
+          })
         }
       });
     });
@@ -68,14 +83,18 @@ class SocketManager {
         break;
         case "isPlaying":
           await roomManager.playPause(roomId,  message.isPlaying);
-          roomManager.getRoom(roomId).members.forEach(member => {
-            userManager.getUser(member._id)?.send(
-              JSON.stringify({
-                type: "playerUpdate",
-                player: roomManager.getRoom(roomId).player,
-              }),
-            );
-          });
+          if(roomManager.getRoom(roomId)){
+            roomManager.getRoom(roomId).members.forEach(member => {
+              userManager.getUser(member._id)?.send(
+                JSON.stringify({
+                  type: "playerUpdate",
+                  player: roomManager.getRoom(roomId).player,
+                }),
+              );
+            });
+          }
+          break;
+          
     }
   }
 }

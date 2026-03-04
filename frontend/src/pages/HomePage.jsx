@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, use } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getUser, logout } from "../API/auth";
 import { getSongs } from "../API/song.js";
-import { createRoom, getRoom, leaveRoom } from "../API/room.js";
+import { createRoom, getRoom } from "../API/room.js";
 
 
 function HomePage() {
@@ -65,8 +65,12 @@ function HomePage() {
                 }
                 if(message.type === "playerUpdate"){
                   setPlayer(message.player);
-                 
-              }}
+                }
+                if(message.type === "roomUpdate"){
+                  console.log("Received room update:", message.room);
+                  setRoom(message.room);  
+                }
+              }
             } else {
               setSearchParams({});
             }
@@ -147,9 +151,6 @@ function HomePage() {
 
   async function handleLeaveRoom() {
     try {
-      if (room?.id) {
-        await leaveRoom(room.id);
-      }
       if (socket) {
         socket.close();
         setSocket(null);

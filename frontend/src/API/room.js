@@ -25,14 +25,4 @@ async function getRoom(roomId) {
     }
 }
 
-async function leaveRoom(roomId) {
-    try {
-        const response = await apiClient.post(`/rooms/${roomId}/leave`);
-        return response.data;
-    } catch (error) {
-        console.error("Error leaving room:", error);
-        return null;
-    }
-}
-
-export { createRoom, getRoom, leaveRoom };
+export { createRoom, getRoom };

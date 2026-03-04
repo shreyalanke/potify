@@ -24,24 +24,4 @@ router.get("/:roomId", (req, res) => {
   }
 });
 
-router.post("/:roomId/leave", (req, res) => {
-  const { roomId } = req.params;
-  const userId = req.user.id;
-  const room = roomManager.getRoom(roomId);
-  
-  if(!room){
-    return res.status(404).json({ success: false, message: "Room not found" });
-  }
-
-  // If the user is the host, delete the entire room
-  if(room.hostId === userId){
-    roomManager.deleteRoom(roomId);
-    return res.json({ success: true, message: "Room deleted successfully" });
-  }
-
-  // Otherwise, just remove the user from the room
-  roomManager.removeUserFromRoom(roomId, userId);
-  res.json({ success: true, message: "Left room successfully" });
-});
-
 export default router;
