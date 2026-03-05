@@ -17,7 +17,8 @@ function HomePage() {
   const [socket, setSocket] = useState(null);
   const audioRef = useRef(null);
 
-  const roomId = searchParams.get("room");
+  const roomId = searchParams.get("room") || "";
+  roomId.toUpperCase();
 
   // UI State for the music player (Mocking currently playing song)
   const [player, setPlayer] = useState(null);
@@ -56,12 +57,6 @@ function HomePage() {
                 const message = JSON.parse(event.data);
                 if (message.type === "song_selected") {
                   setPlayer(message.player);
-                  // if (message.player?.song?.url && audioRef.current) {
-                  //   console.log("Playing new song:", message.player.song.url);
-                  //   audioRef.current.src = `http://localhost:5000/${message.player.song.url}`;
-                  //   audioRef.current.play();
-                  //   setIsPlaying(true);
-                  // }
                 }
                 if(message.type === "playerUpdate"){
                   setPlayer(message.player);
@@ -69,6 +64,8 @@ function HomePage() {
                 if(message.type === "roomUpdate"){
                   console.log("Received room update:", message.room);
                   setRoom(message.room);  
+                  let player = message.room.player;
+                  setPlayer(player);
                 }
               }
             } else {
@@ -100,12 +97,29 @@ function HomePage() {
         audioRef.current.src = `http://localhost:5000/${player.song.url}`;
         setCurrentUrl(player.song.url);
       }
+      setCurrentUrl(player.song.url);
+      let currentTime = player.currentTime || 0;
+      let lastUpdateTime = player.lastUpdateTime;
+      let timeDiff = Date.now() - lastUpdateTime;
+      let serverTime = player.serverTime;
+      let serverTimeDiff = Date.now() - serverTime;
+      console.log(Date.now());
+      console.log(lastUpdateTime)
+      console.log(timeDiff)
+      console.log(serverTimeDiff)
+      audioRef.current.currentTime = currentTime + timeDiff / 1000 - serverTimeDiff / 1000;
+
       if(player.isPlaying){
         audioRef.current.play();
       }else{
         audioRef.current.pause();
       }
-
+  }else{
+    if(audioRef.current){
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = "";
+    }
   }
   }, [player]);
 
@@ -113,7 +127,7 @@ function HomePage() {
     if(socket){
       socket.send(JSON.stringify({ type: "isPlaying", isPlaying }));
     }
-  }, [isPlaying,socket]);
+  }, [isPlaying]);
 
   async function handleLogout() {
     const res = await logout();
@@ -135,7 +149,7 @@ function HomePage() {
     try {
       const result = await createRoom();
       if (result && result.success) {
-        setSearchParams({ room: result.roomId });
+        setSearchParams({ room: result.roomId.toUpperCase() || "" });
       }
     } catch (error) {
       console.error("Error creating room:", error);
@@ -145,7 +159,7 @@ function HomePage() {
   async function handleJoinRoom(e) {
     e.preventDefault();
     if (roomCode.trim()) {
-      setSearchParams({ room: roomCode.trim() });
+      setSearchParams({ room: roomCode.trim().toUpperCase() || "" });
     }
   }
 
@@ -184,8 +198,6 @@ function HomePage() {
       {/* Hidden Audio Player */}
       <audio
         ref={audioRef}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
       />
 
       {/* Top Navbar */}
@@ -288,16 +300,12 @@ function HomePage() {
                     <button
                       onClick={() => {
                         if (audioRef.current) {
-                          if (isPlaying) {
-                            audioRef.current.pause();
-                          } else {
-                            audioRef.current.play();
-                          }
+                          setIsPlaying(!isPlaying);
                         }
                       }}
                       className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition"
                     >
-                      {isPlaying ? "⏸" : "▶"}
+                      {player.isPlaying ? "⏸" : "▶"}
                     </button>
                     <button className="text-gray-400 hover:text-white transition">
                       ⏭

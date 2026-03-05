@@ -43,7 +43,8 @@ async function login(req, res) {
         console.log("Generated token:", token);
         res.cookie("token", token, {
           httpOnly: true,
-          sameSite: "strict",
+          sameSite: "none",
+          secure: true,
         });
         res.status(200).json({ message: "Login successful", success :true });
       } 

@@ -23,7 +23,7 @@ class SocketManager {
         roomManager.getRoom(roomId).members.forEach(member => {
           userManager.getUser(member._id)?.send(JSON.stringify({
             type: "roomUpdate",
-            room: roomManager.getRoom(roomId),
+            room: {...roomManager.getRoom(roomId), player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()}},
           }));
         })
       }
@@ -45,7 +45,7 @@ class SocketManager {
           roomManager.getRoom(roomId).members.forEach(member => {
             userManager.getUser(member._id)?.send(JSON.stringify({
               type: "roomUpdate",
-              room: roomManager.getRoom(roomId),
+              room: {...roomManager.getRoom(roomId), player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()}},
             }));
           })
         }
@@ -76,7 +76,7 @@ class SocketManager {
           userManager.getUser(member._id)?.send(
             JSON.stringify({
               type: "song_selected",
-              player: roomManager.getRoom(roomId).player,
+              player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()},
             }),
           );
         });
@@ -88,7 +88,7 @@ class SocketManager {
               userManager.getUser(member._id)?.send(
                 JSON.stringify({
                   type: "playerUpdate",
-                  player: roomManager.getRoom(roomId).player,
+                  player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()},
                 }),
               );
             });
