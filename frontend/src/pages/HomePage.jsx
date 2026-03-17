@@ -16,6 +16,7 @@ function HomePage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [socket, setSocket] = useState(null);
   const audioRef = useRef(null);
+  const progressRef = useRef(null);
 
   const roomId = searchParams.get("room") || "";
   roomId.toUpperCase();
@@ -25,6 +26,22 @@ function HomePage() {
 
   const currentSong = player?.song || null;
   const [currentUrl, setCurrentUrl] = useState(null);
+
+  useEffect(() => { 
+    if(audioRef.current){
+      if(progressRef.current){
+        if(audioRef.current.ontimeupdate){
+          return;
+        }
+        audioRef.current.ontimeupdate = () => {
+          if(audioRef.current.duration){
+            progressRef.current.value = audioRef.current.currentTime;
+            progressRef.current.max = audioRef.current.duration;
+          }
+        }
+      }
+    }
+  },[])
 
   useEffect(() => {
     (async () => {
@@ -97,7 +114,6 @@ function HomePage() {
         audioRef.current.src = `http://localhost:5000/${player.song.url}`;
         setCurrentUrl(player.song.url);
       }
-      setCurrentUrl(player.song.url);
       let currentTime = player.currentTime || 0;
       let lastUpdateTime = player.lastUpdateTime;
       let timeDiff = Date.now() - lastUpdateTime;
@@ -110,8 +126,10 @@ function HomePage() {
       audioRef.current.currentTime = currentTime + timeDiff / 1000 - serverTimeDiff / 1000;
 
       if(player.isPlaying){
+        console.log("Playing audio");
         audioRef.current.play();
       }else{
+        console.log("Pausing audio");
         audioRef.current.pause();
       }
   }else{
@@ -123,11 +141,6 @@ function HomePage() {
   }
   }, [player]);
 
-  useEffect(() => {
-    if(socket){
-      socket.send(JSON.stringify({ type: "isPlaying", isPlaying }));
-    }
-  }, [isPlaying]);
 
   async function handleLogout() {
     const res = await logout();
@@ -204,7 +217,7 @@ function HomePage() {
       <nav className="h-16 flex justify-between items-center px-6 border-b border-gray-800 bg-gray-950 z-10 shadow-sm">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
-            Potify 🎧
+            Listen To Gather 🎧
           </h1>
         </div>
 
@@ -299,9 +312,11 @@ function HomePage() {
                     </button>
                     <button
                       onClick={() => {
-                        if (audioRef.current) {
-                          setIsPlaying(!isPlaying);
-                        }
+                        if (!socket || !player) return;
+                          socket.send(JSON.stringify({
+                            type: "isPlaying",
+                            isPlaying: !player.isPlaying
+                          }));
                       }}
                       className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition"
                     >
@@ -312,11 +327,13 @@ function HomePage() {
                     </button>
                   </div>
                   {/* Fake Progress Bar */}
-                  <div className="w-full h-1 bg-gray-700 rounded-full flex items-center group cursor-pointer">
-                    <div className="h-full bg-green-500 w-1/3 rounded-full group-hover:bg-green-400 relative">
-                      <div className="w-3 h-3 bg-white rounded-full absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"></div>
-                    </div>
-                  </div>
+                  <progress
+                    ref={progressRef}
+                    className="w-full h-2 rounded-lg overflow-hidden 
+                              [&::-webkit-progress-bar]:bg-gray-700 
+                              [&::-webkit-progress-value]:bg-green-500 
+                              [&::-moz-progress-bar]:bg-green-500"
+                  />
                 </div>
 
                 <div className="w-1/3 flex justify-end text-gray-400 text-xl">
