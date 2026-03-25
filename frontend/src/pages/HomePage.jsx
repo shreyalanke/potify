@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, use } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getUser, logout } from "../API/auth";
 import { getSongs } from "../API/song.js";
@@ -13,10 +13,11 @@ function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [user, setUser] = useState(null);
   const [room, setRoom] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [socket, setSocket] = useState(null);
   const audioRef = useRef(null);
   const progressRef = useRef(null);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
 
   const roomId = searchParams.get("room") || "";
   roomId.toUpperCase();
@@ -27,21 +28,33 @@ function HomePage() {
   const currentSong = player?.song || null;
   const [currentUrl, setCurrentUrl] = useState(null);
 
-  useEffect(() => { 
-    if(audioRef.current){
-      if(progressRef.current){
-        if(audioRef.current.ontimeupdate){
-          return;
-        }
-        audioRef.current.ontimeupdate = () => {
-          if(audioRef.current.duration){
-            progressRef.current.value = audioRef.current.currentTime;
-            progressRef.current.max = audioRef.current.duration;
-          }
-        }
-      }
-    }
-  },[])
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      handleLoadedMetadata();
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    };
+
+    const handleEnded = () => {
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [audioRef.current]);
 
   useEffect(() => {
     (async () => {
@@ -55,6 +68,7 @@ function HomePage() {
             let result = await getRoom(roomId);
             if (result && result.success) {
               setRoom(result.room);
+              setPlayer(result.room.player);
               if (socket){
                 return;
               }
@@ -114,22 +128,20 @@ function HomePage() {
         audioRef.current.src = `http://localhost:5000/${player.song.url}`;
         setCurrentUrl(player.song.url);
       }
-      let currentTime = player.currentTime || 0;
-      let lastUpdateTime = player.lastUpdateTime;
-      let timeDiff = Date.now() - lastUpdateTime;
-      let serverTime = player.serverTime;
-      let serverTimeDiff = Date.now() - serverTime;
-      console.log(Date.now());
-      console.log(lastUpdateTime)
-      console.log(timeDiff)
-      console.log(serverTimeDiff)
-      audioRef.current.currentTime = currentTime + timeDiff / 1000 - serverTimeDiff / 1000;
+      const currentTime = Number(player.currentTime) || 0;
+      const lastUpdateTime = Number(player.lastUpdateTime) || 0;
+      const serverTime = Number(player.serverTime) || 0;
+
+      const syncedTime = player.isPlaying
+        ? Math.max(0, (serverTime - lastUpdateTime) / 1000)
+        : Math.max(0, currentTime);
+
+      audioRef.current.currentTime = syncedTime;
+      setCurrentTime(syncedTime);
 
       if(player.isPlaying){
-        console.log("Playing audio");
-        audioRef.current.play();
+        audioRef.current.play().catch(() => {});
       }else{
-        console.log("Pausing audio");
         audioRef.current.pause();
       }
   }else{
@@ -138,8 +150,37 @@ function HomePage() {
       audioRef.current.currentTime = 0;
       audioRef.current.src = "";
     }
+    setDuration(0);
+    setCurrentTime(0);
   }
   }, [player]);
+
+  function formatTime(timeInSeconds) {
+    if (!Number.isFinite(timeInSeconds)) return "0:00";
+    const totalSeconds = Math.floor(timeInSeconds);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
+
+  function handleSeek(event) {
+    const audio = audioRef.current;
+    const nextTime = Number(event.target.value);
+
+    if (!audio || Number.isNaN(nextTime)) return;
+
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+
+    if (socket && player) {
+      socket.send(
+        JSON.stringify({
+          type: "seek",
+          currentTime: nextTime,
+        })
+      );
+    }
+  }
 
 
   async function handleLogout() {
@@ -326,14 +367,22 @@ function HomePage() {
                       ⏭
                     </button>
                   </div>
-                  {/* Fake Progress Bar */}
-                  <progress
-                    ref={progressRef}
-                    className="w-full h-2 rounded-lg overflow-hidden 
-                              [&::-webkit-progress-bar]:bg-gray-700 
-                              [&::-webkit-progress-value]:bg-green-500 
-                              [&::-moz-progress-bar]:bg-green-500"
-                  />
+                  <div className="w-full">
+                    <input
+                      ref={progressRef}
+                      type="range"
+                      min="0"
+                      max={duration || 0}
+                      step="0.1"
+                      value={Math.min(currentTime, duration || 0)}
+                      onChange={handleSeek}
+                      className="w-full h-1.5 accent-green-500 cursor-pointer"
+                    />
+                    <div className="w-full flex justify-between text-[10px] text-gray-500 mt-0.5">
+                      <span>{formatTime(currentTime)}</span>
+                      <span>{formatTime(duration)}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="w-1/3 flex justify-end text-gray-400 text-xl">

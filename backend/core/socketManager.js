@@ -23,7 +23,7 @@ class SocketManager {
         roomManager.getRoom(roomId).members.forEach(member => {
           userManager.getUser(member._id)?.send(JSON.stringify({
             type: "roomUpdate",
-            room: {...roomManager.getRoom(roomId), player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()}},
+            room: {...roomManager.getRoom(roomId), player: roomManager.getPlayerForClient(roomId)},
           }));
         })
       }
@@ -45,7 +45,7 @@ class SocketManager {
           roomManager.getRoom(roomId).members.forEach(member => {
             userManager.getUser(member._id)?.send(JSON.stringify({
               type: "roomUpdate",
-              room: {...roomManager.getRoom(roomId), player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()}},
+              room: {...roomManager.getRoom(roomId), player: roomManager.getPlayerForClient(roomId)},
             }));
           })
         }
@@ -76,7 +76,7 @@ class SocketManager {
           userManager.getUser(member._id)?.send(
             JSON.stringify({
               type: "song_selected",
-              player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()},
+              player: roomManager.getPlayerForClient(roomId),
             }),
           );
         });
@@ -88,7 +88,20 @@ class SocketManager {
               userManager.getUser(member._id)?.send(
                 JSON.stringify({
                   type: "playerUpdate",
-                  player: {...roomManager.getRoom(roomId).player, serverTime: Date.now()},
+                  player: roomManager.getPlayerForClient(roomId),
+                }),
+              );
+            });
+          }
+          break;
+        case "seek":
+          await roomManager.seek(roomId, message.currentTime);
+          if(roomManager.getRoom(roomId)){
+            roomManager.getRoom(roomId).members.forEach(member => {
+              userManager.getUser(member._id)?.send(
+                JSON.stringify({
+                  type: "playerUpdate",
+                  player: roomManager.getPlayerForClient(roomId),
                 }),
               );
             });

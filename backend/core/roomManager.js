@@ -98,8 +98,37 @@ class RoomManager {
         room.player.lastUpdateTime = new Date().getTime() - room.player.currentTime * 1000;
       }else{
         room.player.currentTime = (new Date().getTime() - room.player.lastUpdateTime) / 1000;
-      }
+      }     
     }
+  }
+
+  async seek(roomId, currentTime) {
+    const room = this.rooms[roomId];
+    if (!room) return;
+
+    const safeCurrentTime = Math.max(0, Number(currentTime) || 0);
+    room.player.currentTime = safeCurrentTime;
+
+    if (room.player.isPlaying) {
+      room.player.lastUpdateTime = new Date().getTime() - safeCurrentTime * 1000;
+    }
+  }
+
+  getPlayerForClient(roomId) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    const serverTime = Date.now();
+    const player = { ...room.player };
+
+    if (player.isPlaying) {
+      player.currentTime = Math.max(0, (serverTime - player.lastUpdateTime) / 1000);
+    }
+
+    return {
+      ...player,
+      serverTime,
+    };
   }
 }
 
