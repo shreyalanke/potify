@@ -3,6 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { getUser, logout } from "../API/auth";
 import { getSongs } from "../API/song.js";
 import { createRoom, getRoom } from "../API/room.js";
+import SongQueue from "../components/SongQueue.jsx";
+import useRoomControls from "../components/RoomControls.jsx";
+import ChatBox from "../components/ChatBox.jsx";
 
 
 function HomePage() {
@@ -28,6 +31,9 @@ function HomePage() {
   const currentSong = player?.song || null;
   const [currentUrl, setCurrentUrl] = useState(null);
 
+  // Room controls for host/admin authority
+  const roomControls = useRoomControls(socket, setSocket, user, room, setRoom, setPlayer, setSearchParams);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -43,6 +49,13 @@ function HomePage() {
 
     const handleEnded = () => {
       setCurrentTime(0);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(
+          JSON.stringify({
+            type: "song_ended",
+          })
+        );
+      }
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
@@ -54,7 +67,7 @@ function HomePage() {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
     };
-  }, [audioRef.current]);
+  }, [audioRef.current, socket]);
 
   useEffect(() => {
     (async () => {
@@ -87,6 +100,9 @@ function HomePage() {
               ws.onmessage = (event) => {
                 const message = JSON.parse(event.data);
                 if (message.type === "song_selected") {
+                  setPlayer(message.player);
+                }
+                if (message.type === "play_song") {
                   setPlayer(message.player);
                 }
                 if(message.type === "playerUpdate"){
@@ -399,7 +415,7 @@ function HomePage() {
         </div>
 
         {/* RIGHT SECTION: Collaboration (Rooms) */}
-        <div className="w-80 bg-gray-950 border-l border-gray-800 p-6 flex flex-col shadow-xl z-10">
+        <div className="w-80 bg-gray-950 border-l border-gray-800 p-6 flex flex-col shadow-xl z-10 overflow-hidden">
           <div className="mb-8">
             <h2 className="text-lg font-bold text-gray-100 mb-2">
               Collaborate
@@ -410,7 +426,7 @@ function HomePage() {
           </div>
 
           {room ? (
-            <div className="flex flex-col gap-6 flex-1 h-full">
+            <div className="flex flex-col gap-3 flex-1 h-full overflow-hidden">
               {/* Active Room Info */}
               <div className="bg-gray-900 p-5 rounded-xl border border-gray-800 shadow-sm">
                 <h3 className="font-semibold text-gray-200 mb-1">
@@ -434,7 +450,7 @@ function HomePage() {
               </div>
 
               {/* Members List */}
-              <div className="bg-gray-900 p-5 rounded-xl border border-gray-800 shadow-sm flex-1 flex flex-col overflow-hidden">
+              <div className="bg-gray-900 p-5 rounded-xl border border-gray-800 shadow-sm max-h-48 flex flex-col overflow-hidden">
                 <h3 className="font-semibold text-gray-200 flex justify-between items-center mb-4">
                   <span>Listeners</span>
                   <span className="bg-gray-800 text-gray-300 text-xs px-2.5 py-1 rounded-full">
@@ -445,35 +461,85 @@ function HomePage() {
                 <div className="overflow-y-auto flex-1 pr-1">
                   <ul className="flex flex-col gap-3">
                     {room.members?.map((member) => (
-                      <li key={member._id} className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-sm font-bold text-white uppercase shadow-sm">
-                          {member.name ? member.name[0] : "?"}
-                        </div>
-                        <div className="flex-1 truncate flex flex-col justify-center">
-                          <p className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
-                            {member.name}
-                            {member._id === user?.id && (
-                              <span className="text-[10px] text-gray-500">
-                                (You)
+                      <li key={member._id} className="flex items-center gap-3 justify-between">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-sm font-bold text-white uppercase shadow-sm flex-shrink-0">
+                            {member.name ? member.name[0] : "?"}
+                          </div>
+                          <div className="flex-1 truncate flex flex-col justify-center">
+                            <p className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
+                              {member.name}
+                              {member._id === user?.id && (
+                                <span className="text-[10px] text-gray-500">
+                                  (You)
+                                </span>
+                              )}
+                            </p>
+                            {member._id === room.hostId && (
+                              <span className="text-[10px] text-green-400 uppercase tracking-wider font-semibold">
+                                Host
                               </span>
                             )}
-                          </p>
-                          {member._id === room.hostId && (
-                            <span className="text-[10px] text-green-400 uppercase tracking-wider font-semibold">
-                              Host
-                            </span>
-                          )}
+                            {roomControls.roles[member._id] === "admin" && member._id !== room.hostId && (
+                              <span className="text-[10px] text-blue-400 uppercase tracking-wider font-semibold">
+                                Admin
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {roomControls.isHostOrAdmin() && member._id !== user?.id && (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {roomControls.isHost() && roomControls.roles[member._id] !== "admin" && (
+                              <button
+                                onClick={() => roomControls.handleMakeAdmin(member._id)}
+                                className="text-xs bg-blue-500 hover:bg-blue-400 text-white px-2 py-1 rounded transition"
+                                title="Make Admin"
+                              >
+                                👑
+                              </button>
+                            )}
+                            <button
+                              onClick={() => roomControls.handleRemoveMember(member._id)}
+                              className="text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded transition"
+                              title="Remove Member"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
 
+              {/* Queue and Chat Container */}
+              <div className="flex flex-col gap-3 flex-1 overflow-hidden">
+                {/* Song Queue Component */}
+                {socket && (
+                  <div className="flex-1 overflow-hidden">
+                    <SongQueue 
+                      socket={socket} 
+                      user={user} 
+                      availableSongs={songs}
+                      onRemoveFromQueue={roomControls.handleRemoveFromQueue}
+                      isHostOrAdmin={roomControls.isHostOrAdmin}
+                    />
+                  </div>
+                )}
+
+                {/* Chat Box Component */}
+                {socket && (
+                  <div className="flex-1 overflow-hidden">
+                    <ChatBox socket={socket} user={user} />
+                  </div>
+                )}
+              </div>
+
               {/* Leave Room Action */}
               <button
                 onClick={handleLeaveRoom}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-2.5 rounded-lg transition shadow-sm mt-auto"
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold py-2.5 rounded-lg transition shadow-sm"
               >
                 Leave Room
               </button>

@@ -15,6 +15,9 @@ class RoomManager {
       hostId: hostId,
       members: [],
       progressBar: 0,
+      queue: [],
+      roles: { [hostId]: "host" },
+      messages: [],
       player: {
         song: null,
         isPlaying: false,
@@ -43,6 +46,9 @@ class RoomManager {
         member = await User.findById(userId).select("-password");
         member._id = member._id.toString();
         this.rooms[roomId].members.push(member);
+        if (!this.rooms[roomId].roles[userId]) {
+          this.rooms[roomId].roles[userId] = "member";
+        }
       }
     }
   }
@@ -75,6 +81,7 @@ class RoomManager {
           return member._id != userId;
         }
       );
+      delete this.rooms[roomId].roles[userId];
     }
   }
 
@@ -129,6 +136,111 @@ class RoomManager {
       ...player,
       serverTime,
     };
+  }
+
+  async addToQueue(roomId, song, userId, userName) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    const queueItem = {
+      id: song._id.toString(),
+      title: song.title,
+      artist: song.artist || "Unknown Artist",
+      url: song.url,
+      addedBy: userName,
+      addedAt: new Date().toISOString(),
+    };
+
+    room.queue.push(queueItem);
+    return room.queue;
+  }
+
+  dequeueFirstSong(roomId) {
+    const room = this.rooms[roomId];
+    if (!room || room.queue.length === 0) return null;
+
+    return room.queue.shift();
+  }
+
+  getQueue(roomId) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    return room.queue;
+  }
+
+  isHostOrAdmin(roomId, userId) {
+    const room = this.rooms[roomId];
+    if (!room) return false;
+    const role = room.roles[userId];
+    return role === "host" || role === "admin";
+  }
+
+  isHost(roomId, userId) {
+    const room = this.rooms[roomId];
+    if (!room) return false;
+    return room.hostId === userId;
+  }
+
+  removeUserFromQueueById(roomId, songId) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    const initialLength = room.queue.length;
+    room.queue = room.queue.filter(item => item.id !== songId);
+    
+    return room.queue.length < initialLength ? room.queue : null;
+  }
+
+  promoteToAdmin(roomId, userId) {
+    const room = this.rooms[roomId];
+    if (!room) return false;
+    
+    if (room.roles[userId]) {
+      room.roles[userId] = "admin";
+      return true;
+    }
+    return false;
+  }
+
+  getRolesMap(roomId) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+    return room.roles;
+  }
+
+  addMessage(roomId, message) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    const messageObj = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: message.text,
+      senderId: message.senderId,
+      senderName: message.senderName,
+      timestamp: new Date().toISOString(),
+    };
+
+    room.messages.push(messageObj);
+    
+    if (room.messages.length > 100) {
+      room.messages.shift();
+    }
+
+    return messageObj;
+  }
+
+  getMessageHistory(roomId) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+    return room.messages;
+  }
+
+  clearMessages(roomId) {
+    const room = this.rooms[roomId];
+    if (room) {
+      room.messages = [];
+    }
   }
 }
 
